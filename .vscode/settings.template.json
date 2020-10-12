@@ -2,6 +2,6 @@
   "python.linting.pylintEnabled": false,
   "python.linting.flake8Enabled": true,
   "python.linting.enabled": true,
-  "python.pythonPath": "/home/{USERNAME}/anaconda3/envs/cs238/bin/python",
+  "python.pythonPath": "/home/{USERNAME}/anaconda3/envs/pinball/bin/python",
   "python.formatting.provider": "black"
 }

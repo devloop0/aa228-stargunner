@@ -6,6 +6,7 @@ env = gym.make("VideoPinball-v0")
 print(env.action_space)
 print(env.observation_space)
 
+"""
 for _episode_num in range(20):
     observation = env.reset()
     episode_reward = 0
@@ -19,6 +20,7 @@ for _episode_num in range(20):
         if done:
             print("Episode finished after {} timesteps".format(t + 1))
             break
+"""
 
 env.close()
 

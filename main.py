@@ -1,4 +1,6 @@
 import gym
+import torch
+
 
 env = gym.make("VideoPinball-v0")
 print(env.action_space)
@@ -19,3 +21,5 @@ for _episode_num in range(20):
             break
 
 env.close()
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

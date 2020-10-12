@@ -18,29 +18,25 @@ class DQNet(nn.Module):
         self.gamma = settings["gamma"]
         self.replay_size = settings["replay_size"]
 
-        # input size: N, 4, 250, 160
+        # input size: N, 3, 250, 160
         self.conv1 = nn.Conv2d(
-            in_channels=4,
-            out_channels=32,
-            kernel_size=(14, 12),
-            stride=(7, 6),
-            padding=1,
+            in_channels=3, out_channels=32, kernel_size=12, stride=6, padding=1,
         )
         self.bn1 = nn.BatchNorm2d(32)
         self.relu1 = nn.ReLU(inplace=True)
-        # input size: N, 32, 35, 26
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=(5, 4), stride=2, padding=0)
-        self.bn2 = nn.BatchNorm2d(32)
+        # input size: N, 32, 26, 26
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0)
+        self.bn2 = nn.BatchNorm2d(64)
         self.relu2 = nn.ReLU(inplace=True)
-        # input size: N, 64, 16, 12
+        # input size: N, 64, 12, 12
         self.conv3 = nn.Conv2d(64, 64, kernel_size=4, stride=2, padding=0)
-        self.bn3 = nn.BatchNorm2d(32)
+        self.bn3 = nn.BatchNorm2d(64)
         self.relu3 = nn.ReLU(inplace=True)
-        # input size: N, 64, 7, 4
-        self.fc4 = nn.Linear(1792, 512)
+        # input size: N, 64, 4, 4
+        self.fc4 = nn.Linear(1024, 256)
         self.relu4 = nn.ReLU(inplace=True)
-        # input size: N, 512
-        self.fc5 = nn.Linear(512, self.num_actions)
+        # input size: N, 256
+        self.fc5 = nn.Linear(256, self.num_actions)
         self.log_softmax5 = nn.LogSoftmax()
         # output size: N, num_actions
 

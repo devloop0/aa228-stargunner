@@ -1,27 +1,18 @@
-import gym
+import logging
 import torch
 
+from train import train_dqn
 
-env = gym.make("VideoPinball-v0")
-print(env.action_space)
-print(env.observation_space)
 
-"""
-for _episode_num in range(20):
-    observation = env.reset()
-    episode_reward = 0
-    for t in range(10000):
-        env.render()
-
-        action = env.action_space.sample()
-        observation, reward, done, info = env.step(action)
-        episode_reward += reward
-
-        if done:
-            print("Episode finished after {} timesteps".format(t + 1))
-            break
-"""
-
-env.close()
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    settings = {
+        "device": device,
+        "epsilon": 0.05,
+        "gamma": 0.1,
+        "lr": 0.001,
+        "max_steps": 10000,
+        "num_episodes": 20,
+    }
+    train_dqn(settings)

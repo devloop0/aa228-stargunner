@@ -1,64 +1,83 @@
+import logging
+import random
+
+import gym
 import torch
-import torch.nn.functional as F
-from .memory import Transition
+from torch import optim
+from tqdm import tqdm
+
+from dqn import DQN
+from utils import play_using_model, process_state, settings_is_valid
 
 
-def optimize_step(model, memory, optimizer, settings):
-    """
-    Heavily inspired by https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
-    """
-    batch_size = settings["batch_size"]
+def train_dqn(settings):
+    required_settings = [
+        "device",
+        "epsilon",
+        "gamma",
+        "lr",
+        "max_steps",
+        "num_episodes",
+    ]
+    if not settings_is_valid(settings, required_settings):
+        raise Exception(f"Settings object {settings} missing some required settings.")
+
     device = settings["device"]
+    epsilon = settings["epsilon"]
     gamma = settings["gamma"]
+    lr = settings["lr"]
+    max_steps = settings["max_steps"]
+    num_episodes = settings["num_episodes"]
 
-    if len(memory) < batch_size:
-        return
+    # Initialize environment
+    env = gym.make("VideoPinball-v0")
 
-    transitions = memory.sample(batch_size)
-    # Convert batch-array of Transitions
-    # to Transition of batch-arrays.
-    batch = Transition(*zip(*transitions))
+    # Initialize model
+    settings["num_actions"] = env.action_space.n
+    model = DQN(settings).to(device)
 
-    # Compute a mask of non-final states and concatenate the batch elements
-    # (a final state would've been the one after which simulation ended)
-    non_final_mask = torch.tensor(
-        tuple(map(lambda s: s is not None, batch.next_state)),
-        device=device,
-        dtype=torch.bool,
-    )
-    non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
-    state_batch = torch.cat(batch.state)
-    action_batch = torch.cat(batch.action)
-    reward_batch = torch.cat(batch.reward)
+    # Initialize other model ingredients
+    criterion = torch.nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
 
-    # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
-    # columns of actions taken. These are the actions which would've been taken
-    # for each batch state according to policy_net
-    state_action_values = model(state_batch).gather(1, action_batch)
+    # Loop over episodes
+    for episode in tqdm(range(num_episodes)):
+        state = process_state(env.reset()).to(device)
+        reward = 0.0
+        loss_acc = 0.0
 
-    # Compute V(s_{t+1}) for all next states.
-    # Expected values of actions for non_final_next_states are computed based
-    # on the "older" target_net; selecting their best reward with max(1)[0].
-    # This is merged based on the mask, such that we'll have either the expected
-    # state value or 0 in case the state was final.
-    next_state_values = torch.zeros(batch_size, device=device)
-    next_state_values[non_final_mask] = model(non_final_next_states).max(1)[0].detach()
-    # Compute the expected Q values
-    expected_state_action_values = (next_state_values * gamma) + reward_batch
+        # Loop over steps in episode
+        for t in range(max_steps):
+            optimizer.zero_grad()
+            with torch.no_grad():
+                Q = model.forward(state)
 
-    # Compute Huber loss
-    loss = F.smooth_l1_loss(
-        state_action_values, expected_state_action_values.unsqueeze(1)
-    )
+            # Get best predicted action and perform it
+            if random.random() < epsilon:
+                predicted_action = env.action_space.sample()
+            else:
+                predicted_action = torch.argmax(Q, dim=1).item()
+            state, reward, done, info = env.step(predicted_action)
+            state = process_state(state).to(device)
 
-    # Optimize the model
-    optimizer.zero_grad()
-    loss.backward()
-    for param in model.parameters():
-        param.grad.data.clamp_(-1, 1)
-    optimizer.step()
+            # Get next Q and use it to optimize
+            Q_next = model.forward(state)
+            target = reward + gamma * torch.max(Q_next, dim=1)[0]
+            loss = criterion(Q, target)
+            loss.backward()
+            optimizer.step()
 
+            # Store stats
+            loss_acc += loss.item()
 
-def train_dqn():
-    # Get latest observation
-    return
+            # Exit if in terminal state
+            if done:
+                logging.debug(f"Episode {episode} finished after {t} timesteps.")
+                break
+
+        logging.debug(f"Loss: {loss_acc / max_steps}")
+
+    play_using_model(env, model, device)
+
+    env.close()
+    return model

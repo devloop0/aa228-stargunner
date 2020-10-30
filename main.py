@@ -11,8 +11,8 @@ if __name__ == "__main__":
         "device": device,
         "epsilon": 0.05,
         "gamma": 0.1,
-        "lr": 0.001,
+        "lr": 0.0001,
         "max_steps": 10000,
-        "num_episodes": 20,
+        "num_episodes": 300,
     }
     train_dqn(settings)

@@ -49,4 +49,4 @@ def play_using_model(env, model, device, max_steps=10000):
         if done:
             break
 
-        time.sleep(0.05)
+        time.sleep(0.09)

@@ -43,7 +43,7 @@ def train_dqn(settings):
     # Loop over episodes
     for episode in tqdm(range(num_episodes)):
         state = process_state(env.reset()).to(device)
-        reward = 0.0
+        reward_acc = 0.0
         loss_acc = 0.0
 
         # Loop over steps in episode
@@ -69,10 +69,13 @@ def train_dqn(settings):
 
             # Store stats
             loss_acc += loss.item()
+            reward_acc += reward
 
             # Exit if in terminal state
             if done:
-                logging.debug(f"Episode {episode} finished after {t} timesteps.")
+                logging.debug(
+                    f"Episode {episode} finished after {t} timesteps with reward {reward_acc}."
+                )
                 break
 
         logging.debug(f"Loss: {loss_acc / max_steps}")

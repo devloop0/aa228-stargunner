@@ -23,14 +23,6 @@ def settings_is_valid(settings, required_settings):
     return len(settings_set.intersection(required_set)) == len(required_set)
 
 
-def get_screen(env):
-    screen = env.render(return_rgb_array=True).transpose((2, 0, 1))
-    # Convert to float, rescale, convert to torch tensor
-    screen = np.ascontiguousarray(screen, dtype=np.float32) / 255
-    screen = torch.from_numpy(screen)
-    return resize(screen).unsqueeze(0)
-
-
 def process_state(state):
     screen = np.ascontiguousarray(state, dtype=np.float32) / 255
     screen = torch.from_numpy(screen).permute(2, 0, 1)

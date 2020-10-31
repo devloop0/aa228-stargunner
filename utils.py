@@ -45,7 +45,7 @@ def save_model_checkpoint(model, optimizer, episode, loss, out_filename):
             "optimizer_state_dict": optimizer.state_dict(),
             "loss": loss,
         },
-        "out_filename",
+        out_filename,
     )
 
 

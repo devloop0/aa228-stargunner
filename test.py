@@ -29,7 +29,9 @@ def play_using_model(env, model, device, max_steps=10000):
         state = process_state(env.reset()).to(device)
         for _step in range(max_steps):
             env.render()
-            action = torch.argmax(model.forward(state), dim=1).item()
+            forward_res = model.forward(state)
+            # print("FORWARD_RES", forward_res)
+            action = torch.argmax(forward_res, dim=1).item()
             state, reward, done, info = env.step(action)
             state = process_state(state).to(device)
 
@@ -46,7 +48,7 @@ if __name__ == "__main__":
     # Initialize model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     num_actions = env.action_space.n
-    model = load_model_checkpoint("out/checkpoints/dqn_14", num_actions).to(device)
+    model = load_model_checkpoint("out/checkpoints/dqn_250", num_actions).to(device)
 
     # play using model
     play_using_model(env, model, device)

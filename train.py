@@ -1,4 +1,5 @@
 import logging
+import math
 import random
 
 import gym
@@ -23,7 +24,9 @@ def train_dqn(settings):
         "batch_size",
         "checkpoint_frequency",
         "device",
-        "epsilon",
+        "eps_start",
+        "eps_end",
+        "eps_decay",
         "gamma",
         "logs_dir",
         "lr",
@@ -39,7 +42,9 @@ def train_dqn(settings):
     batch_size = settings["batch_size"]
     checkpoint_frequency = settings["checkpoint_frequency"]
     device = settings["device"]
-    epsilon = settings["epsilon"]
+    eps_start = settings["eps_start"]
+    eps_end = settings["eps_end"]
+    eps_decay = settings["eps_decay"]
     gamma = settings["gamma"]
     logs_dir = settings["logs_dir"]
     lr = settings["lr"]
@@ -69,6 +74,7 @@ def train_dqn(settings):
 
     # Loop over episodes
     model.train()
+    steps_done = 0
     for episode in tqdm(range(num_episodes)):
         state = process_state(env.reset()).to(device)
         reward_acc = 0.0
@@ -81,6 +87,9 @@ def train_dqn(settings):
                 Q = model.forward(state)
 
             # Get best predicted action and perform it
+            epsilon = eps_end + (eps_start - eps_end) * math.exp(
+                -1 * steps_done / eps_decay
+            )
             if random.random() < epsilon:
                 predicted_action = torch.tensor([env.action_space.sample()]).to(device)
             else:
@@ -138,6 +147,7 @@ def train_dqn(settings):
             # Store stats
             loss_acc += loss.item()
             reward_acc += reward
+            steps_done += 1
 
             # Exit if in terminal state
             if done:
@@ -146,7 +156,7 @@ def train_dqn(settings):
                 )
                 break
 
-        logging.debug(f"Loss: {loss_acc / max_steps}")
+        logging.debug(f"Loss: {loss_acc / t}")
 
         # Save model checkpoint
         if (episode != 0) and (episode % checkpoint_frequency == 0):
@@ -159,9 +169,10 @@ def train_dqn(settings):
             )
 
         # Log to tensorboard
-        writer.add_scalar("Average loss", loss_acc / max_steps, episode)
-        writer.add_scalar("Timesteps", t, episode)
         writer.add_scalar("Total Reward", reward_acc, episode)
+        writer.add_scalar("Average Reward", reward_acc / t, episode)
+        writer.add_scalar("Timesteps", t, episode)
+        writer.add_scalar("Average loss", loss_acc / t, episode)
 
     # Save model
     save_model(model, f"{out_dir}/{model_name}.model")

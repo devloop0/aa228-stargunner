@@ -130,3 +130,9 @@ dmypy.json
 
 # Ignore VSCode local settings
 .vscode/settings.json
+
+# Ignore logs
+logs/
+
+# Ignore output
+out/

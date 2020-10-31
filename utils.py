@@ -1,6 +1,5 @@
 import numpy as np
 from PIL import Image
-import time
 import torch
 from torchvision import transforms
 
@@ -38,15 +37,17 @@ def process_state(state):
     return resize(screen).unsqueeze(0)
 
 
-def play_using_model(env, model, device, max_steps=10000):
-    state = process_state(env.reset()).to(device)
-    for step in range(max_steps):
-        env.render()
-        action = torch.argmax(model.forward(state), dim=1).item()
-        state, reward, done, info = env.step(action)
-        state = process_state(state).to(device)
+def save_model_checkpoint(model, optimizer, episode, loss, out_filename):
+    torch.save(
+        {
+            "episode": episode,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "loss": loss,
+        },
+        "out_filename",
+    )
 
-        if done:
-            break
 
-        time.sleep(0.05)
+def save_model(model, out_filename):
+    torch.save(model.state_dict(), out_filename)

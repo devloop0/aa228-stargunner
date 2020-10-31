@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     settings = {
         "batch_size": 64,
-        "checkpoint_frequency": 2,  # number of episodes between each checkpoint save
+        "checkpoint_frequency": 25,  # number of episodes between each checkpoint save
         "device": device,
         "epsilon": 0.25,
         "gamma": 0.9,

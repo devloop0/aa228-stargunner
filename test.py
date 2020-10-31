@@ -15,6 +15,14 @@ def load_model(model_filename, num_actions):
     return model
 
 
+def load_model_checkpoint(checkpoint_filename, num_actions):
+    settings = {"num_actions": num_actions}
+    model = DQN(settings)
+    model.load_state_dict(torch.load(checkpoint_filename)["model_state_dict"])
+    model.eval()
+    return model
+
+
 def play_using_model(env, model, device, max_steps=10000):
     model.eval()
     with torch.no_grad():
@@ -28,7 +36,7 @@ def play_using_model(env, model, device, max_steps=10000):
             if done:
                 break
 
-            time.sleep(0.09)
+            time.sleep(0.05)
 
 
 if __name__ == "__main__":
@@ -38,7 +46,7 @@ if __name__ == "__main__":
     # Initialize model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     num_actions = env.action_space.n
-    model = load_model("out/dqn.model", num_actions).to(device)
+    model = load_model_checkpoint("out/checkpoints/dqn_14", num_actions).to(device)
 
     # play using model
     play_using_model(env, model, device)

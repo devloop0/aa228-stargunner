@@ -15,30 +15,30 @@ class DQN(nn.Module):
 
         self.num_actions = settings["num_actions"]
 
-        # input size: N, 3, 128, 128
+        # input size: N, 3, 84, 84
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=32, kernel_size=8, stride=4,),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
         )
-        # input size: N, 32, 31, 31
+        # input size: N, 32, 20, 20
         self.conv2 = nn.Sequential(
             nn.Conv2d(32, 64, kernel_size=4, stride=2),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
         )
-        # input size: N, 64, 14, 14
+        # input size: N, 64, 9, 9
         self.conv3 = nn.Sequential(
-            nn.Conv2d(64, 64, kernel_size=4, stride=2),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
         )
-        # input size: N, 64, 6, 6
-        # After flattening: 1, 2304
-        self.fc4 = nn.Linear(2304, 256, bias=True)
+        # input size: N, 64, 7, 7
+        # After flattening: 1, 3136
+        self.fc4 = nn.Linear(3136, 512, bias=True)
         self.relu4 = nn.ReLU(inplace=True)
-        # input size: N, 256
-        self.fc5 = nn.Linear(256, self.num_actions, bias=True)
+        # input size: N, 512
+        self.fc5 = nn.Linear(512, self.num_actions, bias=True)
         self.log_softmax5 = nn.LogSoftmax(dim=1)
         # output size: N, num_actions
 

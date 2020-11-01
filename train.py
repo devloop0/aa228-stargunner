@@ -75,7 +75,7 @@ def train_dqn(settings):
     # Initialize memory
     logging.info("Initializing memory.")
     memory = ReplayMemory(memory_size)
-    memory.init_with_random((1, 3, 128, 128), num_actions)
+    memory.init_with_random((1, 3, 84, 84), num_actions)
     logging.info("Finished initializing memory.")
 
     # Initialize other model ingredients
@@ -194,6 +194,9 @@ def train_dqn(settings):
 
     # Save model
     save_model(model, f"{out_dir}/{model_name}.model")
+
+    # Report final stats
+    logging.info("Steps Done:", steps_done)
 
     env.close()
     return model

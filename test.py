@@ -34,7 +34,7 @@ def play_using_model(env, model, device, max_steps=10000, epsilon=0.01):
     reward_acc = 0.0
     with torch.no_grad():
         state = process_state(env.reset()).to(device)
-        for step in tqdm(range(max_steps)):
+        for _step in tqdm(range(max_steps)):
             env.render()
             if random.random() < epsilon:
                 action = env.action_space.sample()
@@ -50,9 +50,9 @@ def play_using_model(env, model, device, max_steps=10000, epsilon=0.01):
 
             time.sleep(0.05)
 
-    logging.info("Total Reward:", reward_acc)
-    logging.info("Average Reward per Timestep:", reward_acc / step)
-    logging.info("Timesteps:", step)
+    logging.info(f"Total Reward: {reward_acc}")
+    logging.info(f"Average Reward per Timestep: {reward_acc / _step}")
+    logging.info(f"Timesteps: {_step}")
 
 
 if __name__ == "__main__":

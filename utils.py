@@ -3,9 +3,7 @@ from PIL import Image
 import torch
 from torchvision import transforms
 
-resize = transforms.Compose(
-    [transforms.Resize([128, 128], interpolation=Image.CUBIC,),],
-)
+resize = transforms.Compose([transforms.Resize([84, 84], interpolation=Image.CUBIC,),],)
 
 
 def settings_is_valid(settings, required_settings):

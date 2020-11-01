@@ -18,6 +18,15 @@ from utils import (
 )
 
 
+def clamp_reward(reward):
+    if reward > 0:
+        return 1.0
+    elif reward < 0:
+        return -1.0
+    else:
+        return 0.0
+
+
 def train_dqn(settings):
     required_settings = [
         "batch_size",
@@ -100,10 +109,10 @@ def train_dqn(settings):
                 predicted_action = torch.tensor([env.action_space.sample()]).to(device)
             else:
                 predicted_action = torch.argmax(Q, dim=1)
-            next_state, reward, done, info = env.step(predicted_action.item())
+            next_state, raw_reward, done, info = env.step(predicted_action.item())
             # Note that next state could also be a difference
             next_state = process_state(next_state)
-            reward = torch.tensor([reward])
+            reward = torch.tensor([clamp_reward(raw_reward)])
 
             # Save to memory
             memory.push(state.to("cpu"), predicted_action.to("cpu"), next_state, reward)
@@ -150,12 +159,12 @@ def train_dqn(settings):
 
             # Clamp gradient to avoid gradient explosion
             for param in model.parameters():
-                param.grad.data.clamp_(-100, 100)
+                param.grad.data.clamp_(-1, 1)
             optimizer.step()
 
             # Store stats
             loss_acc += loss.item()
-            reward_acc += reward
+            reward_acc += raw_reward
             steps_done += 1
 
             # Exit if in terminal state

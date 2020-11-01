@@ -1,5 +1,4 @@
 import logging
-import math
 import random
 
 import gym
@@ -26,6 +25,7 @@ def train_dqn(settings):
         "device",
         "eps_start",
         "eps_end",
+        "eps_cliff",
         "eps_decay",
         "gamma",
         "logs_dir",
@@ -44,7 +44,8 @@ def train_dqn(settings):
     device = settings["device"]
     eps_start = settings["eps_start"]
     eps_end = settings["eps_end"]
-    eps_decay = settings["eps_decay"]
+    eps_cliff = settings["eps_cliff"]
+    # eps_decay = settings["eps_decay"]
     gamma = settings["gamma"]
     logs_dir = settings["logs_dir"]
     lr = settings["lr"]
@@ -63,7 +64,10 @@ def train_dqn(settings):
     model = DQN(settings).to(device)
 
     # Initialize memory
+    logging.info("Initializing memory.")
     memory = ReplayMemory(memory_size)
+    memory.init_with_random((1, 3, 128, 128), num_actions)
+    logging.info("Finished initializing memory.")
 
     # Initialize other model ingredients
     criterion = F.smooth_l1_loss
@@ -87,56 +91,61 @@ def train_dqn(settings):
                 Q = model.forward(state)
 
             # Get best predicted action and perform it
-            epsilon = eps_end + (eps_start - eps_end) * math.exp(
-                -1 * steps_done / eps_decay
-            )
+            if steps_done < eps_cliff:
+                epsilon = -(eps_start - eps_end) / eps_cliff * steps_done + eps_start
+            else:
+                epsilon = eps_end
+
             if random.random() < epsilon:
                 predicted_action = torch.tensor([env.action_space.sample()]).to(device)
             else:
                 predicted_action = torch.argmax(Q, dim=1)
             next_state, reward, done, info = env.step(predicted_action.item())
             # Note that next state could also be a difference
-            next_state = process_state(next_state).to(device)
-            reward = torch.tensor([reward]).to(device)
+            next_state = process_state(next_state)
+            reward = torch.tensor([reward])
 
             # Save to memory
-            memory.push(state, predicted_action, next_state, reward)
+            memory.push(state.to("cpu"), predicted_action.to("cpu"), next_state, reward)
 
             # Move to next state
-            state = next_state
+            state = next_state.to(device)
 
             # Sample from memory
-            if len(memory) < batch_size:
-                continue
             batch = Transition(*zip(*memory.sample(batch_size)))
 
-            # Mask terminal state (taken from https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
+            # Mask terminal state (adapted from https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
             final_mask = torch.tensor(
                 tuple(map(lambda s: s is None, batch.next_state)),
                 device=device,
                 dtype=torch.bool,
             )
             # print("FINAL_MASK", final_mask.shape)
-            state_batch = torch.cat(batch.state)
-            action_batch = torch.cat(batch.action)
-            reward_batch = torch.cat(batch.reward)
+            state_batch = torch.cat(batch.state).to(device)
+            next_state_batch = torch.cat(batch.next_state).to(device)
+            action_batch = torch.cat(batch.action).to(device)
+            reward_batch = torch.cat(batch.reward).to(device)
 
             # print("STATE_BATCH SHAPE", state_batch.shape)
+            # print("STATE_BATCH", state_batch[4, :, 100])
             # print("ACTION_BATCH SHAPE", action_batch.shape)
+            # print("ACTION_BATCH", action_batch)
             # print("REWARD_BATCH SHAPE", reward_batch.shape)
 
             # Compute Q
             # Q_next = torch.zeros((batch_size, num_actions))
             # print("MODEL STATE BATCH SHAPE", model(state_batch).shape)
-            Q_pred = model(state_batch)
-            Q_actual = Q_pred.gather(1, action_batch.view(action_batch.shape[0], 1))
-            Q_max = torch.max(Q_actual, dim=1)[0]
+            Q_next_pred = model(next_state_batch)
+            Q_actual = model(state_batch).gather(
+                1, action_batch.view(action_batch.shape[0], 1)
+            )
+            Q_max = torch.max(Q_next_pred, dim=1)[0]
             # print("Q_MAX shape", Q_max.shape)
             target = reward_batch + gamma * Q_max * final_mask.to(Q_max.dtype)
             # print("TARGET SIZE", target.shape)
 
             # Calculate loss
-            loss = criterion(torch.max(Q_pred, dim=1)[0], target)
+            loss = criterion(torch.max(Q_actual, dim=1)[0], target)
             loss.backward()
 
             # Clamp gradient to avoid gradient explosion

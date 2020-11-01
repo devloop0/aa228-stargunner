@@ -15,16 +15,17 @@ if __name__ == "__main__":
         "batch_size": 128,
         "checkpoint_frequency": 25,  # number of episodes between each checkpoint save
         "device": device,
-        "eps_start": 0.95,
-        "eps_end": 0.05,
+        "eps_start": 1.0,
+        "eps_end": 0.1,
+        "eps_cliff": 1000000,
         "eps_decay": 500,
-        "gamma": 0.95,
+        "gamma": 0.99,
         "logs_dir": "logs",
         "lr": 0.0002,
         "max_steps": 10000,
-        "memory_size": 10000,
+        "memory_size": 50000,
         "model_name": "dqn",
-        "num_episodes": 400,
+        "num_episodes": 50,
         "out_dir": "out",
     }
     train_dqn(settings)

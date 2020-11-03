@@ -19,24 +19,24 @@ class DQN(nn.Module):
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=32, kernel_size=8, stride=4,),
             nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
         )
         # input size: N, 32, 20, 20
         self.conv2 = nn.Sequential(
             nn.Conv2d(32, 64, kernel_size=4, stride=2),
             nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
         )
         # input size: N, 64, 9, 9
         self.conv3 = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=3, stride=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
         )
         # input size: N, 64, 7, 7
         # After flattening: 1, 3136
         self.fc4 = nn.Linear(3136, 512, bias=True)
-        self.relu4 = nn.ReLU(inplace=True)
+        self.relu4 = nn.LeakyReLU(inplace=True)
         # input size: N, 512
         self.fc5 = nn.Linear(512, self.num_actions, bias=True)
         self.log_softmax5 = nn.LogSoftmax(dim=1)

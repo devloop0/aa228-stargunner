@@ -65,7 +65,7 @@ def train_dqn(settings):
     out_dir = settings["out_dir"]
 
     # Initialize environment
-    env = gym.make("VideoPinball-v0")
+    env = gym.make("StarGunner-v0")
 
     # Initialize model
     num_actions = env.action_space.n
@@ -81,6 +81,12 @@ def train_dqn(settings):
     # Initialize other model ingredients
     criterion = F.smooth_l1_loss
     optimizer = optim.Adam(model.parameters(), lr=lr)
+    lmbda = (
+        lambda epoch: 1.0
+        if epoch > memory_size
+        else min(memory_size / (epoch + 1), 100.0)
+    )
+    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
 
     # Initialize tensorboard
     writer = SummaryWriter(logs_dir)
@@ -154,13 +160,14 @@ def train_dqn(settings):
             # print("TARGET SIZE", target.shape)
 
             # Calculate loss
-            loss = criterion(torch.max(Q_actual, dim=1)[0], target)
+            loss = criterion(Q_actual.squeeze(), target)
             loss.backward()
 
             # Clamp gradient to avoid gradient explosion
             for param in model.parameters():
                 param.grad.data.clamp_(-1, 1)
             optimizer.step()
+            scheduler.step()
 
             # Store stats
             loss_acc += loss.item()
@@ -196,7 +203,7 @@ def train_dqn(settings):
     save_model(model, f"{out_dir}/{model_name}.model")
 
     # Report final stats
-    logging.info("Steps Done:", steps_done)
+    logging.info(f"Steps Done: {steps_done}")
 
     env.close()
     return model

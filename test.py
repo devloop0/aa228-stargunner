@@ -29,7 +29,7 @@ def load_model_checkpoint(checkpoint_filename, num_actions):
     return model
 
 
-def play_using_model(env, model, device, max_steps=10000, epsilon=0.01):
+def play_using_model(env, model, device, max_steps=10000, epsilon=0.05):
     model.eval()
     reward_acc = 0.0
     with torch.no_grad():
@@ -57,7 +57,7 @@ def play_using_model(env, model, device, max_steps=10000, epsilon=0.01):
 
 if __name__ == "__main__":
     # Initialize environment
-    env = gym.make("VideoPinball-v0")
+    env = gym.make("StarGunner-v0")
 
     # Initialize model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

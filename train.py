@@ -103,7 +103,7 @@ def train_dqn(settings):
         for t in range(max_steps):
             optimizer.zero_grad()
             with torch.no_grad():
-                Q = model.forward(state)
+                Q = model.forward(state.type(torch.float))
 
             # Get best predicted action and perform it
             if steps_done < eps_cliff:
@@ -136,8 +136,8 @@ def train_dqn(settings):
                 dtype=torch.bool,
             )
             # print("FINAL_MASK", final_mask.shape)
-            state_batch = torch.cat(batch.state).to(device)
-            next_state_batch = torch.cat(batch.next_state).to(device)
+            state_batch = torch.cat(batch.state).type(torch.float).to(device)
+            next_state_batch = torch.cat(batch.next_state).type(torch.float).to(device)
             action_batch = torch.cat(batch.action).to(device)
             reward_batch = torch.cat(batch.reward).to(device)
 

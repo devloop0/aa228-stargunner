@@ -26,8 +26,8 @@ class ReplayMemory(object):
     def init_with_random(self, state_shape, num_actions):
         while len(self.memory) < self.capacity:
             # Store in CPU to avoid GPU memory issues
-            state = torch.randn(*state_shape).to("cpu")
-            next_state = torch.randn(*state_shape).to("cpu")
+            state = torch.randn(*state_shape).type(torch.float16).to("cpu")
+            next_state = torch.randn(*state_shape).type(torch.float16).to("cpu")
             action = torch.tensor([random.randint(0, num_actions - 1)]).to("cpu")
             reward = torch.randn(1).to("cpu")
             self.push(state, action, next_state, reward)

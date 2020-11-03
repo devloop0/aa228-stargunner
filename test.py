@@ -39,7 +39,7 @@ def play_using_model(env, model, device, max_steps=10000, epsilon=0.05):
             if random.random() < epsilon:
                 action = env.action_space.sample()
             else:
-                forward_res = model.forward(state)
+                forward_res = model.forward(state.type(torch.float))
                 action = torch.argmax(forward_res, dim=1).item()
             state, reward, done, info = env.step(action)
             state = process_state(state).to(device)

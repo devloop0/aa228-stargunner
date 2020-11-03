@@ -22,9 +22,9 @@ def settings_is_valid(settings, required_settings):
 
 
 def process_state(state):
-    screen = np.ascontiguousarray(state, dtype=np.float32) / 255
+    screen = np.ascontiguousarray(state, dtype=np.float16) / 255
     screen = torch.from_numpy(screen).permute(2, 0, 1)
-    return resize(screen).unsqueeze(0)
+    return resize(screen).unsqueeze(0).type(torch.float16)
 
 
 def save_model_checkpoint(model, optimizer, episode, loss, out_filename):

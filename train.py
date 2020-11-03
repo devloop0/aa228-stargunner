@@ -81,12 +81,6 @@ def train_dqn(settings):
     # Initialize other model ingredients
     criterion = F.smooth_l1_loss
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    lmbda = (
-        lambda epoch: 1.0
-        if epoch > memory_size
-        else min(memory_size / (epoch + 1), 100.0)
-    )
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lmbda)
 
     # Initialize tensorboard
     writer = SummaryWriter(logs_dir)
@@ -131,7 +125,7 @@ def train_dqn(settings):
 
             # Mask terminal state (adapted from https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
             final_mask = torch.tensor(
-                tuple(map(lambda s: s is None, batch.next_state)),
+                tuple(map(lambda s: s is not None, batch.next_state)),
                 device=device,
                 dtype=torch.bool,
             )
@@ -167,7 +161,6 @@ def train_dqn(settings):
             for param in model.parameters():
                 param.grad.data.clamp_(-1, 1)
             optimizer.step()
-            scheduler.step()
 
             # Store stats
             loss_acc += loss.item()
@@ -198,6 +191,7 @@ def train_dqn(settings):
         writer.add_scalar("Average Reward", reward_acc / t, episode)
         writer.add_scalar("Timesteps", t, episode)
         writer.add_scalar("Average loss", loss_acc / t, episode)
+        writer.add_scalar("Steps", reward_acc / t, steps_done)
 
     # Save model
     save_model(model, f"{out_dir}/{model_name}.model")

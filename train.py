@@ -95,7 +95,6 @@ def train_dqn(settings):
     policy_net.train()
     steps_done = 0
     log_reward_acc = 0.0
-    log_loss_acc = 0.0
     log_steps_acc = 0
     for episode in tqdm(range(num_episodes)):
         state = process_state(env.reset()).to(device)
@@ -176,6 +175,9 @@ def train_dqn(settings):
             reward_acc += raw_reward
             steps_done += 1
 
+            if t % target_net_update_freq == 0:
+                target_net.load_state_dict(policy_net.state_dict())
+
             # Exit if in terminal state
             if done:
                 logging.debug(
@@ -184,9 +186,6 @@ def train_dqn(settings):
                 break
 
         logging.debug(f"Loss: {loss_acc / t}")
-
-        if episode % target_net_update_freq == 0:
-            target_net.load_state_dict(policy_net.state_dict())
 
         # Save model checkpoint
         if (episode != 0) and (episode % checkpoint_frequency == 0):
@@ -200,18 +199,16 @@ def train_dqn(settings):
 
         # Log to tensorboard
         log_reward_acc += reward_acc
-        log_loss_acc += loss_acc
         log_steps_acc += t
+        writer.add_scalar("Loss / Timestep", loss_acc / t, episode)
         if episode % log_freq == 0:
             writer.add_scalar("Reward", log_reward_acc / log_freq, episode)
             writer.add_scalar(
                 "Reward / Timestep", log_reward_acc / log_steps_acc, episode
             )
             writer.add_scalar("Duration", log_steps_acc / log_freq, episode)
-            writer.add_scalar("Loss / Timestep", log_loss_acc / log_steps_acc, episode)
             writer.add_scalar("Steps", log_reward_acc / log_steps_acc, steps_done)
             log_reward_acc = 0.0
-            log_loss_acc = 0.0
             log_steps_acc = 0
 
     # Save model

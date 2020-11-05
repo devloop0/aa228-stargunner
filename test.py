@@ -62,7 +62,7 @@ if __name__ == "__main__":
     # Initialize model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     num_actions = env.action_space.n
-    model = load_model_checkpoint("out/checkpoints/dqn_650", num_actions).to(device)
+    model = load_model("out/dqn.model", num_actions).to(device)
 
     # play using model
     play_using_model(env, model, device)

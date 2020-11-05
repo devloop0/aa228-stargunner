@@ -37,6 +37,7 @@ def train_dqn(settings):
         "eps_cliff",
         "eps_decay",
         "gamma",
+        "log_freq",
         "logs_dir",
         "lr",
         "max_steps",
@@ -44,6 +45,7 @@ def train_dqn(settings):
         "model_name",
         "num_episodes",
         "out_dir",
+        "target_net_update_freq",
     ]
     if not settings_is_valid(settings, required_settings):
         raise Exception(f"Settings object {settings} missing some required settings.")
@@ -57,12 +59,14 @@ def train_dqn(settings):
     # eps_decay = settings["eps_decay"]
     gamma = settings["gamma"]
     logs_dir = settings["logs_dir"]
+    log_freq = settings["log_freq"]
     lr = settings["lr"]
     max_steps = settings["max_steps"]
     memory_size = settings["memory_size"]
     model_name = settings["model_name"]
     num_episodes = settings["num_episodes"]
     out_dir = settings["out_dir"]
+    target_net_update_freq = settings["target_net_update_freq"]
 
     # Initialize environment
     env = gym.make("StarGunner-v0")
@@ -70,7 +74,10 @@ def train_dqn(settings):
     # Initialize model
     num_actions = env.action_space.n
     settings["num_actions"] = num_actions
-    model = DQN(settings).to(device)
+    policy_net = DQN(settings).to(device)
+    target_net = DQN(settings).to(device)
+    target_net.load_state_dict(policy_net.state_dict())
+    target_net.eval()
 
     # Initialize memory
     logging.info("Initializing memory.")
@@ -79,15 +86,17 @@ def train_dqn(settings):
     logging.info("Finished initializing memory.")
 
     # Initialize other model ingredients
-    criterion = F.smooth_l1_loss
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(policy_net.parameters(), lr=lr)
 
     # Initialize tensorboard
     writer = SummaryWriter(logs_dir)
 
     # Loop over episodes
-    model.train()
+    policy_net.train()
     steps_done = 0
+    log_reward_acc = 0.0
+    log_loss_acc = 0.0
+    log_steps_acc = 0
     for episode in tqdm(range(num_episodes)):
         state = process_state(env.reset()).to(device)
         reward_acc = 0.0
@@ -95,9 +104,8 @@ def train_dqn(settings):
 
         # Loop over steps in episode
         for t in range(max_steps):
-            optimizer.zero_grad()
             with torch.no_grad():
-                Q = model.forward(state.type(torch.float))
+                Q = policy_net.forward(state.type(torch.float))
 
             # Get best predicted action and perform it
             if steps_done < eps_cliff:
@@ -144,21 +152,22 @@ def train_dqn(settings):
             # Compute Q
             # Q_next = torch.zeros((batch_size, num_actions))
             # print("MODEL STATE BATCH SHAPE", model(state_batch).shape)
-            Q_next_pred = model(next_state_batch)
-            Q_actual = model(state_batch).gather(
+            Q_actual = policy_net(state_batch).gather(
                 1, action_batch.view(action_batch.shape[0], 1)
             )
-            Q_max = torch.max(Q_next_pred, dim=1)[0]
+            Q_next_pred = target_net(next_state_batch)
+            Q_max = torch.max(Q_next_pred, dim=1)[0].detach()
             # print("Q_MAX shape", Q_max.shape)
             target = reward_batch + gamma * Q_max * final_mask.to(Q_max.dtype)
             # print("TARGET SIZE", target.shape)
 
             # Calculate loss
-            loss = criterion(Q_actual.squeeze(), target)
+            loss = F.smooth_l1_loss(Q_actual, target.unsqueeze(1))
+            optimizer.zero_grad()
             loss.backward()
 
             # Clamp gradient to avoid gradient explosion
-            for param in model.parameters():
+            for param in policy_net.parameters():
                 param.grad.data.clamp_(-1, 1)
             optimizer.step()
 
@@ -176,10 +185,13 @@ def train_dqn(settings):
 
         logging.debug(f"Loss: {loss_acc / t}")
 
+        if episode % target_net_update_freq == 0:
+            target_net.load_state_dict(policy_net.state_dict())
+
         # Save model checkpoint
         if (episode != 0) and (episode % checkpoint_frequency == 0):
             save_model_checkpoint(
-                model,
+                policy_net,
                 optimizer,
                 episode,
                 loss,
@@ -187,17 +199,26 @@ def train_dqn(settings):
             )
 
         # Log to tensorboard
-        writer.add_scalar("Total Reward", reward_acc, episode)
-        writer.add_scalar("Average Reward", reward_acc / t, episode)
-        writer.add_scalar("Timesteps", t, episode)
-        writer.add_scalar("Average loss", loss_acc / t, episode)
-        writer.add_scalar("Steps", reward_acc / t, steps_done)
+        log_reward_acc += reward_acc
+        log_loss_acc += loss_acc
+        log_steps_acc += t
+        if episode % log_freq == 0:
+            writer.add_scalar("Reward", log_reward_acc / log_freq, episode)
+            writer.add_scalar(
+                "Reward / Timestep", log_reward_acc / log_steps_acc, episode
+            )
+            writer.add_scalar("Duration", log_steps_acc / log_freq, episode)
+            writer.add_scalar("Loss / Timestep", log_loss_acc / log_steps_acc, episode)
+            writer.add_scalar("Steps", log_reward_acc / log_steps_acc, steps_done)
+            log_reward_acc = 0.0
+            log_loss_acc = 0.0
+            log_steps_acc = 0
 
     # Save model
-    save_model(model, f"{out_dir}/{model_name}.model")
+    save_model(policy_net, f"{out_dir}/{model_name}.model")
 
     # Report final stats
     logging.info(f"Steps Done: {steps_done}")
 
     env.close()
-    return model
+    return policy_net

@@ -41,7 +41,6 @@ class DQNAgent:
         self.model_name = settings["model_name"]
         self.num_actions = self.env.action_space.n
         settings["num_actions"] = self.num_actions
-        print("OBS SPACE", self.env.observation_space)
         settings["num_channels"] = self.frame_history_len
         self.out_dir = settings["out_dir"]
         self.target_update_freq = settings["target_update_freq"]
@@ -100,8 +99,8 @@ class DQNAgent:
 
     def select_epsilon_greedy_action(self, state, steps_done):
         if random.random() < self._get_epsilon(steps_done):
-            return torch.IntTensor(random.randrange(self.num_actions))
-        obs = torch.from_numpy(state).to(self.dtype).unsqueeze(0) / 255.0
+            return torch.IntTensor([random.randrange(self.num_actions)])
+        obs = torch.from_numpy(state).type(self.dtype).unsqueeze(0) / 255.0
         with torch.no_grad():
             return self.Q(obs).argmax(dim=1).cpu()  # returns action
 

@@ -27,13 +27,12 @@ def process_state(state):
     return resize(screen).unsqueeze(0).type(torch.float16)
 
 
-def save_model_checkpoint(model, optimizer, episode, loss, out_filename):
+def save_model_checkpoint(model, optimizer, timestep, out_filename):
     torch.save(
         {
-            "episode": episode,
+            "timestep": timestep,
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
-            "loss": loss,
         },
         out_filename,
     )

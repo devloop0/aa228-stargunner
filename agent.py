@@ -174,7 +174,7 @@ class DQNAgent:
                 target_Q_vals = r_batch + (self.gamma * next_Q_vals)
 
                 # Calculate loss and backprop
-                loss = F.smooth_l1_loss(current_Q_vals, target_Q_vals)
+                loss = F.smooth_l1_loss(current_Q_vals.squeeze(), target_Q_vals)
                 self.optimizer.zero_grad()
                 loss.backward()
 
@@ -196,14 +196,17 @@ class DQNAgent:
                         self.Q,
                         self.optimizer,
                         t,
-                        f"{self.out_dir}/checkpoints/{self.model_name}_{t}",
+                        f"{self.out_dir}/checkpoints/{self.model_name}_{num_param_updates}",
                     )
 
             # Log progress, potentially at end of episode
             if done:
                 wrapper = get_wrapper_by_name(self.env, "Monitor")
                 episode_rewards = wrapper.get_episode_rewards()
-                if len(episode_rewards) % self.log_freq == 0:
+                if (
+                    param_updates_since_last_log > 0
+                    and len(episode_rewards) % self.log_freq == 0
+                ):
                     mean_reward = round(
                         np.mean(episode_rewards[-self.log_freq - 1 : -1]), 2
                     )
@@ -215,18 +218,24 @@ class DQNAgent:
                     sum_duration = np.sum(episode_lengths[-self.log_freq - 1 : -1])
 
                     self.writer.add_scalar(
-                        f"Mean Reward ({self.log_freq} episodes)", mean_reward
+                        f"Mean Reward ({self.log_freq} episodes)",
+                        mean_reward,
+                        len(episode_rewards),
                     )
                     self.writer.add_scalar(
-                        f"Mean Duration ({self.log_freq} episodes)", mean_duration
+                        f"Mean Duration ({self.log_freq} episodes)",
+                        mean_duration,
+                        len(episode_rewards),
                     )
                     self.writer.add_scalar(
                         f"Mean Reward per Timestep ({self.log_freq} episodes)",
                         round(sum_reward / sum_duration, 2),
+                        len(episode_rewards),
                     )
                     self.writer.add_scalar(
                         f"Mean Loss ({self.log_freq} episodes)",
                         loss_acc_since_last_log / param_updates_since_last_log,
+                        len(episode_rewards),
                     )
 
                     loss_acc_since_last_log = 0.0

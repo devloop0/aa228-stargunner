@@ -19,11 +19,11 @@ if __name__ == "__main__":
         "device": device,
         "env": "StarGunner-v0",
         "eps_start": 1.0,
-        "eps_end": 0.05,
+        "eps_end": 0.1,
         "eps_cliff": 1000000,
         "frame_history_len": 4,
         "gamma": 0.99,
-        "learning_freq": 4,
+        "learning_freq": 1,
         "learning_start": 50000,
         "logs_dir": "logs",
         "log_freq": 10,
@@ -32,7 +32,7 @@ if __name__ == "__main__":
         "model_name": "dqn",
         "out_dir": "out",
         "target_update_freq": 10000,
-        "total_timesteps": 1000000,
+        "total_timesteps": 200000,
     }
     dqn = DQNAgent(settings)
     dqn.train()

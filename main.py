@@ -26,13 +26,13 @@ if __name__ == "__main__":
         "learning_freq": 1,
         "learning_start": 50000,
         "logs_dir": "logs",
-        "log_freq": 10,
+        "log_freq": 100,
         "lr": 0.00025,
         "memory_size": 1000000,
         "model_name": "dqn",
         "out_dir": "out",
         "target_update_freq": 10000,
-        "total_timesteps": 200000,
+        "total_timesteps": 5000000,
     }
     dqn = DQNAgent(settings)
     dqn.train()

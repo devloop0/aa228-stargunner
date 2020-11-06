@@ -199,14 +199,20 @@ class DQNAgent:
                         f"{self.out_dir}/checkpoints/{self.model_name}_{num_param_updates}",
                     )
 
-            # Log progress, potentially at end of episode
             if done:
                 wrapper = get_wrapper_by_name(self.env, "Monitor")
                 episode_rewards = wrapper.get_episode_rewards()
-                if (
-                    param_updates_since_last_log > 0
-                    and len(episode_rewards) % self.log_freq == 0
-                ):
+                # Log progress, potentially at end of episode
+                if param_updates_since_last_log > 0:
+                    self.writer.add_scalar(
+                        f"Mean Loss ({self.log_freq} episodes)",
+                        loss_acc_since_last_log / param_updates_since_last_log,
+                        len(episode_rewards),
+                    )
+                    loss_acc_since_last_log = 0.0
+                    param_updates_since_last_log = 0
+
+                if len(episode_rewards) % self.log_freq == 0:
                     mean_reward = round(
                         np.mean(episode_rewards[-self.log_freq - 1 : -1]), 2
                     )
@@ -220,26 +226,18 @@ class DQNAgent:
                     self.writer.add_scalar(
                         f"Mean Reward ({self.log_freq} episodes)",
                         mean_reward,
-                        len(episode_rewards),
+                        len(episode_rewards) // self.log_freq,
                     )
                     self.writer.add_scalar(
                         f"Mean Duration ({self.log_freq} episodes)",
                         mean_duration,
-                        len(episode_rewards),
+                        len(episode_rewards) // self.log_freq,
                     )
                     self.writer.add_scalar(
                         f"Mean Reward per Timestep ({self.log_freq} episodes)",
                         round(sum_reward / sum_duration, 2),
-                        len(episode_rewards),
+                        len(episode_rewards) // self.log_freq,
                     )
-                    self.writer.add_scalar(
-                        f"Mean Loss ({self.log_freq} episodes)",
-                        loss_acc_since_last_log / param_updates_since_last_log,
-                        len(episode_rewards),
-                    )
-
-                    loss_acc_since_last_log = 0.0
-                    param_updates_since_last_log = 0
 
         # Save model
         save_model(self.Q, f"{self.out_dir}/{self.model_name}.model")

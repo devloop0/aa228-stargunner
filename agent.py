@@ -54,7 +54,9 @@ class DQNAgent:
 
         # Init model supporting objects
         self.memory = ReplayBuffer(self.memory_size, self.frame_history_len)
-        self.optimizer = optim.Adam(self.Q.parameters(), lr=settings["lr"])
+        self.optimizer = optim.RMSprop(
+            self.Q.parameters(), lr=settings["lr"], alpha=0.95, eps=0.01
+        )
         self.loss = F.smooth_l1_loss
 
         # Logging
@@ -205,7 +207,7 @@ class DQNAgent:
                 # Log progress, potentially at end of episode
                 if param_updates_since_last_log > 0:
                     self.writer.add_scalar(
-                        f"Mean Loss ({self.log_freq} episodes)",
+                        "Mean Loss per Timestep",
                         loss_acc_since_last_log / param_updates_since_last_log,
                         len(episode_rewards),
                     )
@@ -224,17 +226,17 @@ class DQNAgent:
                     sum_duration = np.sum(episode_lengths[-self.log_freq - 1 : -1])
 
                     self.writer.add_scalar(
-                        f"Mean Reward ({self.log_freq} episodes)",
+                        f"Mean Reward (epoch = {self.log_freq} episodes)",
                         mean_reward,
                         len(episode_rewards) // self.log_freq,
                     )
                     self.writer.add_scalar(
-                        f"Mean Duration ({self.log_freq} episodes)",
+                        f"Mean Duration (epoch = {self.log_freq} episodes)",
                         mean_duration,
                         len(episode_rewards) // self.log_freq,
                     )
                     self.writer.add_scalar(
-                        f"Mean Reward per Timestep ({self.log_freq} episodes)",
+                        f"Mean Reward per Timestep (epoch = {self.log_freq} episodes)",
                         round(sum_reward / sum_duration, 2),
                         len(episode_rewards) // self.log_freq,
                     )

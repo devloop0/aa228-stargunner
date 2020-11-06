@@ -175,7 +175,7 @@ def train_dqn(settings):
             reward_acc += raw_reward
             steps_done += 1
 
-            if t % target_net_update_freq == 0:
+            if steps_done % target_net_update_freq == 0:
                 target_net.load_state_dict(policy_net.state_dict())
 
             # Exit if in terminal state

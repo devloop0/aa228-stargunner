@@ -8,14 +8,15 @@ from utils.seed import set_global_seeds
 from utils.atari_wrapper import wrap_deepmind
 
 
-def get_env(task, seed):
+def get_env(task, seed, monitor=True):
     env = gym.make(task)
 
     set_global_seeds(seed)
     env.seed(seed)
 
     expt_dir = "tmp/gym-results"
-    env = wrappers.Monitor(env, expt_dir, force=True)
+    if monitor:
+        env = wrappers.Monitor(env, expt_dir, force=True)
     env = wrap_deepmind(env)
 
     return env

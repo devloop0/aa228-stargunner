@@ -27,6 +27,7 @@ class DQNAgent:
         self.dtype = (
             torch.cuda.FloatTensor if self.device.type == "cuda" else torch.FloatTensor
         )
+        self.env_name = settings["env"]
         self.env = get_env(settings["env"], 0)
         self.eps_cliff = settings["eps_cliff"]
         self.eps_start = settings["eps_start"]
@@ -99,8 +100,12 @@ class DQNAgent:
             epsilon = self.eps_end
         return epsilon
 
-    def select_epsilon_greedy_action(self, state, steps_done):
-        if random.random() < self._get_epsilon(steps_done):
+    def select_epsilon_greedy_action(self, state, steps_done, epsilon=None):
+        if epsilon is None:
+            threshold = self._get_epsilon(steps_done)
+        else:
+            threshold = epsilon
+        if random.random() < threshold:
             return torch.IntTensor([random.randrange(self.num_actions)])
         obs = torch.from_numpy(state).type(self.dtype).unsqueeze(0) / 255.0
         with torch.no_grad():
@@ -111,10 +116,56 @@ class DQNAgent:
             get_wrapper_by_name(self.env, "Monitor").get_total_steps() >= self.max_steps
         )
 
+    def eval_model(self, epoch, n=100):
+        self.Q.eval()
+        env = get_env(self.env_name, 0, monitor=False)
+        rewards = []
+        durations = []
+        for _e in tqdm(range(n)):
+            memory = ReplayBuffer(10000, self.frame_history_len)
+            state = env.reset()[..., np.newaxis]
+            reward_acc = 0.0
+            for t in range(10000):
+                if state is None:
+                    break
+
+                memory.store_frame(state)
+                recent_observations = memory.encode_recent_observation()
+
+                action = self.select_epsilon_greedy_action(
+                    recent_observations, None, 0.05
+                ).item()
+                state, reward, done, _ = env.step(action)
+
+                if done:
+                    state = env.reset()
+
+                state = state[..., np.newaxis]
+                reward_acc += reward
+
+            durations.append(t)
+        self.Q.train()
+        sum_rewards = sum(rewards)
+        sum_durations = sum(durations)
+        self.writer.add_scalar(
+            f"Mean Reward ({n} episodes)", round(sum_rewards / len(rewards), 2), epoch,
+        )
+        self.writer.add_scalar(
+            f"Mean Duration ({n} episodes)",
+            round(sum_durations / len(durations), 2),
+            epoch,
+        )
+        self.writer.add_scalar(
+            f"Mean Reward per Timestep ({n} episodes)",
+            round(sum_rewards / sum_durations, 2),
+            epoch,
+        )
+
     def train(self):
         num_param_updates = 0
         loss_acc_since_last_log = 0.0
         param_updates_since_last_log = 0
+        num_episodes = 0
 
         state = self.env.reset()[..., np.newaxis]
         for t in tqdm(range(self.total_timesteps)):
@@ -241,8 +292,14 @@ class DQNAgent:
                         len(episode_rewards) // self.log_freq,
                     )
 
+            if done:
+                num_episodes += 1
+
         # Save model
         save_model(self.Q, f"{self.out_dir}/{self.model_name}.model")
 
         self.env.close()
+
+        print(f"Number of Episodes: {num_episodes}")
+
         return self.Q

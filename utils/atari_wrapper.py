@@ -172,5 +172,5 @@ class ClippedRewardsWrapper(gym.Wrapper):
 
 def wrap_deepmind(env):
     env = AtariPreprocessing(env, frame_skip=1)
-    env = ClippedRewardsWrapper(env)
+    # env = ClippedRewardsWrapper(env)
     return env

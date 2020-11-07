@@ -28,7 +28,7 @@ class DQNAgent:
             torch.cuda.FloatTensor if self.device.type == "cuda" else torch.FloatTensor
         )
         self.env_name = settings["env"]
-        self.env = get_env(settings["env"], 0)
+        self.env = get_env(settings["env"], 6)
         self.eps_cliff = settings["eps_cliff"]
         self.eps_start = settings["eps_start"]
         self.eps_end = settings["eps_end"]
@@ -118,7 +118,7 @@ class DQNAgent:
 
     def eval_model(self, epoch, n=100):
         self.Q.eval()
-        env = get_env(self.env_name, 0, monitor=False)
+        env = get_env(self.env_name, 6, monitor=False)
         rewards = []
         durations = []
         for _e in tqdm(range(n)):
@@ -227,18 +227,18 @@ class DQNAgent:
                 target_Q_vals = r_batch + (self.gamma * next_Q_vals)
 
                 # Calculate loss and backprop
-                bellman_error = target_Q_vals.unsqueeze(1) - current_Q_vals
-                clipped_bellman_error = bellman_error.clamp(-1, 1)
-                d_error = clipped_bellman_error * -1.0
+                loss = F.smooth_l1_loss(current_Q_vals.squeeze(), target_Q_vals)
                 self.optimizer.zero_grad()
-                current_Q_vals.backward(d_error.data)
+                loss.backward()
+                for param in self.Q.parameters():
+                    param.grad.data.clamp_(-1, 1)
 
                 # Update weights
                 self.optimizer.step()
                 num_param_updates += 1
 
                 # Store stats
-                loss_acc_since_last_log += torch.linalg.norm(bellman_error)
+                loss_acc_since_last_log += loss.item()
                 param_updates_since_last_log += 1
 
                 # Update target network periodically

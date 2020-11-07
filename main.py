@@ -17,7 +17,7 @@ if __name__ == "__main__":
         "batch_size": 32,
         "checkpoint_frequency": 50000,  # number of parameter updates between each checkpoint save
         "device": device,
-        "env": "StarGunner-v0",
+        "env": "StarGunnerDeterministic-v4",
         "eps_start": 1.0,
         "eps_end": 0.1,
         "eps_cliff": 1000000,

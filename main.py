@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # https://github.com/transedward/pytorch-dqn/blob/master/dqn_learn.py
     settings = {
         "batch_size": 32,
-        "checkpoint_frequency": 100000,  # number of parameter updates between each checkpoint save
+        "checkpoint_frequency": 50000,  # number of parameter updates between each checkpoint save
         "device": device,
         "env": "StarGunner-v0",
         "eps_start": 1.0,
@@ -26,13 +26,13 @@ if __name__ == "__main__":
         "learning_freq": 4,
         "learning_start": 50000,
         "logs_dir": "logs",
-        "log_freq": 50,
+        "log_freq": 10000,
         "lr": 0.00025,
         "memory_size": 1000000,
         "model_name": "dqn",
         "out_dir": "out",
         "target_update_freq": 10000,
-        "total_timesteps": 10000000,
+        "total_timesteps": 25000000,
     }
     dqn = DQNAgent(settings)
     dqn.train()

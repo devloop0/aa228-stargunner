@@ -214,7 +214,7 @@ class DQNAgent:
                 next_state_batch = (
                     torch.from_numpy(next_state_batch).type(self.dtype) / 255.0
                 )
-                not_done_mask = 1 - torch.from_numpy(done_mask).type(self.dtype)
+                not_done_mask = torch.from_numpy(1 - done_mask).type(self.dtype)
 
                 # Calculate current Q value
                 current_Q_vals = self.Q(state_batch).gather(1, act_batch.unsqueeze(1))
@@ -227,16 +227,18 @@ class DQNAgent:
                 target_Q_vals = r_batch + (self.gamma * next_Q_vals)
 
                 # Calculate loss and backprop
-                loss = F.smooth_l1_loss(current_Q_vals.squeeze(), target_Q_vals)
+                bellman_error = target_Q_vals.unsqueeze(1) - current_Q_vals
+                clipped_bellman_error = bellman_error.clamp(-1, 1)
+                d_error = clipped_bellman_error * -1.0
                 self.optimizer.zero_grad()
-                loss.backward()
+                current_Q_vals.backward(d_error.data)
 
                 # Update weights
                 self.optimizer.step()
                 num_param_updates += 1
 
                 # Store stats
-                loss_acc_since_last_log += loss.item()
+                loss_acc_since_last_log += torch.linalg.norm(bellman_error)
                 param_updates_since_last_log += 1
 
                 # Update target network periodically
@@ -252,44 +254,42 @@ class DQNAgent:
                         f"{self.out_dir}/checkpoints/{self.model_name}_{num_param_updates}",
                     )
 
-            if done:
-                wrapper = get_wrapper_by_name(self.env, "Monitor")
-                episode_rewards = wrapper.get_episode_rewards()
-                # Log progress, potentially at end of episode
-                if param_updates_since_last_log > 0:
+                # Log progress
+                if (
+                    num_param_updates % (self.log_freq // 2) == 0
+                    and param_updates_since_last_log > 0
+                ):
                     self.writer.add_scalar(
-                        "Mean Loss per Timestep",
+                        "Mean Loss per Update (Updates)",
                         loss_acc_since_last_log / param_updates_since_last_log,
-                        len(episode_rewards),
+                        num_param_updates,
                     )
                     loss_acc_since_last_log = 0.0
                     param_updates_since_last_log = 0
 
-                if len(episode_rewards) % self.log_freq == 0:
-                    mean_reward = round(
-                        np.mean(episode_rewards[-self.log_freq - 1 : -1]), 2
-                    )
-                    sum_reward = np.sum(episode_rewards[-self.log_freq - 1 : -1])
+                if num_param_updates % self.log_freq == 0:
+                    wrapper = get_wrapper_by_name(self.env, "Monitor")
+                    episode_rewards = wrapper.get_episode_rewards()
+                    mean_reward = round(np.mean(episode_rewards[-101:-1]), 2)
+                    sum_reward = np.sum(episode_rewards[-101:-1])
                     episode_lengths = wrapper.get_episode_lengths()
-                    mean_duration = round(
-                        np.mean(episode_lengths[-self.log_freq - 1 : -1]), 2
-                    )
-                    sum_duration = np.sum(episode_lengths[-self.log_freq - 1 : -1])
+                    mean_duration = round(np.mean(episode_lengths[-101:-1]), 2)
+                    sum_duration = np.sum(episode_lengths[-101:-1])
 
                     self.writer.add_scalar(
-                        f"Mean Reward (epoch = {self.log_freq} episodes)",
+                        f"Mean Reward (epoch = {self.log_freq} updates)",
                         mean_reward,
-                        len(episode_rewards) // self.log_freq,
+                        num_param_updates // self.log_freq,
                     )
                     self.writer.add_scalar(
-                        f"Mean Duration (epoch = {self.log_freq} episodes)",
+                        f"Mean Duration (epoch = {self.log_freq} updates)",
                         mean_duration,
-                        len(episode_rewards) // self.log_freq,
+                        num_param_updates // self.log_freq,
                     )
                     self.writer.add_scalar(
-                        f"Mean Reward per Timestep (epoch = {self.log_freq} episodes)",
+                        f"Mean Reward per Timestep (epoch = {self.log_freq} updates)",
                         round(sum_reward / sum_duration, 2),
-                        len(episode_rewards) // self.log_freq,
+                        num_param_updates // self.log_freq,
                     )
 
             if done:

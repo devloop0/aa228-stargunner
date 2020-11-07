@@ -32,7 +32,7 @@ if __name__ == "__main__":
         "model_name": "dqn",
         "out_dir": "out",
         "target_update_freq": 10000,
-        "total_timesteps": 8000000,
+        "total_timesteps": 10000000,
     }
     dqn = DQNAgent(settings)
     dqn.train()

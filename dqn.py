@@ -37,9 +37,7 @@ class DQN(nn.Module):
             nn.Linear(3136, 512, bias=True), nn.LeakyReLU(inplace=True)
         )
         # input size: N, 512
-        self.fc5 = nn.Sequential(
-            nn.Linear(512, self.num_actions, bias=True), nn.LogSoftmax(dim=1)
-        )
+        self.fc5 = nn.Sequential(nn.Linear(512, self.num_actions, bias=True))
         # output size: N, num_actions
 
     def forward(self, x):

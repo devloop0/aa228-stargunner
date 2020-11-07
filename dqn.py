@@ -21,20 +21,15 @@ class DQN(nn.Module):
             nn.Conv2d(
                 in_channels=self.num_channels, out_channels=32, kernel_size=8, stride=4,
             ),
-            nn.BatchNorm2d(32),
             nn.LeakyReLU(inplace=True),
         )
         # input size: N, 32, 20, 20
         self.conv2 = nn.Sequential(
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2), nn.LeakyReLU(inplace=True),
         )
         # input size: N, 64, 9, 9
         self.conv3 = nn.Sequential(
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1), nn.LeakyReLU(inplace=True),
         )
         # input size: N, 64, 7, 7
         # After flattening: 1, 3136
